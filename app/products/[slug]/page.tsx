@@ -8,7 +8,9 @@ import {
   Bookmark,
   ExternalLink,
   Play,
-  TrendingUp,
+  MessageSquare,
+  Calendar,
+  User,
 } from "lucide-react";
 import { SignInButton, useAuth } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
@@ -16,9 +18,7 @@ import { api } from "@/convex/_generated/api";
 import { CommentThread } from "@/components/devhunt/comment-thread";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { formatRelativeDate } from "@/lib/devhunt";
-import { type ProductDetail } from "@/lib/devhunt";
+import { formatRelativeDate, type ProductDetail } from "@/lib/devhunt";
 
 export default function ProductDetailPage({
   params,
@@ -36,234 +36,220 @@ export default function ProductDetailPage({
 
   if (product === null) {
     return (
-      <div className="text-sm text-muted-foreground">Product not found.</div>
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <p className="text-gray-500">Product not found.</p>
+      </div>
     );
   }
 
   if (!product) {
     return (
-      <div className="text-sm text-muted-foreground">Loading product…</div>
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <p className="text-gray-500">Loading product...</p>
+      </div>
     );
   }
 
-  const actionCluster = (
-    <div className="flex flex-wrap gap-3">
-      <Button
-        variant={product.viewerHasVoted ? "secondary" : "default"}
-        className="gap-2"
-        onClick={() => void voteProduct({ productId: product._id })}
-      >
-        <TrendingUp aria-hidden="true" className="size-4" />
-        Upvote ({product.votesCount})
-      </Button>
-      <Button
-        variant={product.viewerHasBookmarked ? "secondary" : "outline"}
-        className="gap-2"
-        onClick={() => void toggleBookmark({ productId: product._id })}
-      >
-        <Bookmark aria-hidden="true" className="size-4" />
-        Save
-      </Button>
-      <a
-        href={product.websiteUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-border/80 bg-background/80 px-5 text-sm font-semibold tracking-[-0.01em] text-foreground backdrop-blur-sm hover:-translate-y-0.5 hover:bg-accent"
-      >
-        <ExternalLink aria-hidden="true" className="size-4" />
-        Visit website
-      </a>
-    </div>
-  );
-
   return (
-    <div className="grid gap-8 xl:grid-cols-[1.35fr_0.65fr]">
-      <div className="flex flex-col gap-8">
-        <Card className="overflow-hidden border-none bg-[linear-gradient(135deg,rgba(18,27,57,0.98),rgba(41,52,116,0.95)_55%,rgba(187,152,66,0.72)_170%)] text-white">
-          <CardContent className="flex flex-col gap-8 p-7 md:p-10">
-            <div className="flex flex-wrap items-start justify-between gap-6">
-              <div className="flex min-w-0 items-start gap-5">
-                <div className="flex size-[5.5rem] shrink-0 items-center justify-center overflow-hidden rounded-[2rem] border border-white/10 bg-white/10 text-2xl font-semibold uppercase tracking-[0.14em] text-white">
-                  {product.logoUrl ? (
-                    <Image
-                      src={product.logoUrl}
-                      alt={product.name}
-                      width={88}
-                      height={88}
-                      priority
-                      className="size-[5.5rem] rounded-[2rem] object-cover"
-                    />
-                  ) : (
-                    product.name.slice(0, 2)
-                  )}
+    <div className="grid gap-8 lg:grid-cols-[1fr_300px]">
+      <div className="flex flex-col gap-6">
+        <div className="ph-card overflow-hidden">
+          <div className="flex flex-col sm:flex-row gap-4 p-4">
+            <div className="w-24 h-24 sm:w-32 sm:h-32 shrink-0 rounded-lg overflow-hidden bg-gray-100">
+              {product.logoUrl ? (
+                <Image
+                  src={product.logoUrl}
+                  alt={product.name}
+                  width={128}
+                  height={128}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-2xl font-semibold uppercase text-gray-400">
+                  {product.name.slice(0, 2)}
                 </div>
-                <div className="flex min-w-0 flex-col gap-4">
-                  <div className="flex flex-wrap gap-2">
-                    <Badge className="border-white/15 bg-white/10 text-white">
-                      {product.category}
-                    </Badge>
-                    {product.isBeginnerFriendly && (
-                      <Badge className="border-white/15 bg-white/10 text-white">
-                        Beginner-friendly
-                      </Badge>
-                    )}
-                    {product.isOpenSource && (
-                      <Badge className="border-white/15 bg-white/10 text-white">
-                        Open source
-                      </Badge>
-                    )}
-                    {product.isFree && (
-                      <Badge className="border-white/15 bg-white/10 text-white">
-                        Free
-                      </Badge>
-                    )}
-                  </div>
-                  <div>
-                    <h1 className="hero-title max-w-4xl text-white">
-                      {product.name}
-                    </h1>
-                    <p className="mt-4 max-w-3xl text-lg leading-8 text-white/76">
-                      {product.tagline}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
 
-            <p className="max-w-4xl text-sm leading-8 text-white/75 md:text-base">
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap gap-2 mb-2">
+                <span className="ph-badge">{product.category}</span>
+                {product.isBeginnerFriendly && (
+                  <span className="ph-badge">Beginner-friendly</span>
+                )}
+                {product.isOpenSource && (
+                  <span className="ph-badge">Open source</span>
+                )}
+                {product.isFree && <span className="ph-badge">Free</span>}
+              </div>
+
+              <h1 className="hero-title text-2xl sm:text-3xl">
+                {product.name}
+              </h1>
+              <p className="mt-1 text-gray-600">{product.tagline}</p>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-100 p-4">
+            <p className="text-gray-700 leading-relaxed">
               {product.description}
             </p>
+          </div>
 
+          <div className="border-t border-gray-100 p-4 flex flex-wrap gap-3">
             {isSignedIn ? (
-              actionCluster
+              <>
+                <Button
+                  variant={product.viewerHasVoted ? "default" : "default"}
+                  className={
+                    product.viewerHasVoted
+                      ? "bg-primary hover:bg-primary/90"
+                      : "bg-gray-900 hover:bg-gray-800"
+                  }
+                  onClick={() => void voteProduct({ productId: product._id })}
+                >
+                  <span className="mr-1 text-lg">+</span>
+                  {product.viewerHasVoted ? "Upvoted" : "Upvote"} (
+                  {product.votesCount})
+                </Button>
+                <Button
+                  variant={
+                    product.viewerHasBookmarked ? "secondary" : "outline"
+                  }
+                  onClick={() =>
+                    void toggleBookmark({ productId: product._id })
+                  }
+                >
+                  <Bookmark className="size-4 mr-1" />
+                  {product.viewerHasBookmarked ? "Saved" : "Save"}
+                </Button>
+              </>
             ) : (
-              <SignInButton mode="modal">{actionCluster}</SignInButton>
+              <SignInButton mode="modal">
+                <Button
+                  variant="default"
+                  className="bg-gray-900 hover:bg-gray-800"
+                >
+                  Sign in to vote
+                </Button>
+              </SignInButton>
             )}
-          </CardContent>
-        </Card>
 
-        {product.galleryUrls?.length > 0 ? (
-          <section className="grid gap-4 md:grid-cols-2">
-            {product.galleryUrls.filter(Boolean).map((url, index) => (
-              <Card
-                key={url as string}
-                className={index === 0 ? "md:col-span-2" : ""}
-              >
-                <CardContent className="p-2.5">
+            <a
+              href={product.websiteUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-10 items-center gap-2 rounded-full border border-gray-200 bg-white px-5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              <ExternalLink className="size-4" />
+              Visit website
+            </a>
+          </div>
+        </div>
+
+        {product.galleryUrls && product.galleryUrls.length > 0 && (
+          <div className="ph-card p-4">
+            <h2 className="section-title mb-4">Screenshots</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {product.galleryUrls.filter(Boolean).map((url, index) => (
+                <div
+                  key={url as string}
+                  className="rounded-lg overflow-hidden bg-gray-100"
+                >
                   <Image
                     src={url as string}
                     alt={`${product.name} screenshot ${index + 1}`}
-                    width={1600}
-                    height={index === 0 ? 960 : 768}
-                    className={`w-full rounded-[1.5rem] border border-border/60 object-cover ${
-                      index === 0 ? "h-[24rem]" : "h-64"
-                    }`}
+                    width={800}
+                    height={500}
+                    className="w-full h-auto"
                   />
-                </CardContent>
-              </Card>
-            ))}
-          </section>
-        ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <CommentThread productId={product._id} />
       </div>
 
-      <div className="flex flex-col gap-6">
-        <Card className="editorial-panel">
-          <CardContent className="flex flex-col gap-5 p-7">
-            <div>
-              <p className="eyebrow">Launch overview</p>
-              <h2 className="mt-3 font-heading text-3xl tracking-[-0.04em]">
-                Product snapshot
-              </h2>
+      <aside className="flex flex-col gap-4">
+        <div className="ph-card p-4">
+          <h3 className="font-semibold text-gray-900 mb-4">Product info</h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500 flex items-center gap-2">
+                <User className="size-4" />
+                Maker
+              </span>
+              <Link
+                href={`/u/${product.submitter?.username ?? product.submitter?._id}`}
+                className="font-medium text-primary hover:underline"
+              >
+                {product.submitter?.name ?? "Unknown"}
+              </Link>
             </div>
-            <div className="grid gap-4">
-              {[
-                ["Maker", product.submitter?.name ?? "Unknown"],
-                [
-                  "Maker role",
-                  product.submitter?.headline ?? "Independent builder",
-                ],
-                [
-                  "Launched",
-                  formatRelativeDate(
-                    product.launchTime ?? product._creationTime,
-                  ),
-                ],
-                ["Votes", product.votesCount],
-                ["Comments", product.commentsCount],
-                ["Bookmarks", product.bookmarksCount],
-              ].map(([label, value]) => (
-                <div
-                  key={label}
-                  className="flex items-center justify-between gap-4 rounded-[1.4rem] border border-border/70 bg-background/70 px-4 py-3"
-                >
-                  <span className="text-sm text-muted-foreground">{label}</span>
-                  <span className="font-semibold tracking-[-0.02em] text-foreground">
-                    {label === "Maker" ? (
-                      <Link
-                        href={`/u/${product.submitter?.username ?? product.submitter?._id}`}
-                        className="hover:text-primary"
-                      >
-                        {value}
-                      </Link>
-                    ) : (
-                      value
-                    )}
-                  </span>
-                </div>
-              ))}
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500 flex items-center gap-2">
+                <Calendar className="size-4" />
+                Launched
+              </span>
+              <span className="font-medium text-gray-900">
+                {formatRelativeDate(
+                  product.launchTime ?? product._creationTime,
+                )}
+              </span>
             </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500">Votes</span>
+              <span className="font-semibold text-primary">
+                {product.votesCount}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500 flex items-center gap-2">
+                <MessageSquare className="size-4" />
+                Comments
+              </span>
+              <span className="font-semibold text-gray-900">
+                {product.commentsCount}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {product.demoUrl && (
+          <div className="ph-card p-4">
+            <h3 className="font-semibold text-gray-900 mb-3">Try it</h3>
+            <a
+              href={product.demoUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="ph-btn-primary w-full justify-center"
+            >
+              <Play className="size-4" />
+              Open live demo
+            </a>
+          </div>
+        )}
+
+        {product.submitter?.headline && (
+          <div className="ph-card p-4">
+            <h3 className="font-semibold text-gray-900 mb-2">
+              About the maker
+            </h3>
+            <p className="text-sm text-gray-600">
+              {product.submitter.headline}
+            </p>
             <Link
               href={`/u/${product.submitter?.username ?? product.submitter?._id}`}
-              className="inline-flex items-center gap-2 text-sm font-semibold text-primary"
+              className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
             >
               View maker profile
-              <ArrowUpRight aria-hidden="true" className="size-4" />
+              <ArrowUpRight className="size-4" />
             </Link>
-          </CardContent>
-        </Card>
-
-        {product.demoUrl ? (
-          <Card className="editorial-panel">
-            <CardContent className="flex flex-col gap-4 p-7">
-              <p className="eyebrow">Live demo</p>
-              <h2 className="font-heading text-3xl tracking-[-0.04em]">
-                Try the experience directly.
-              </h2>
-              <p className="text-sm leading-7 text-muted-foreground">
-                Open the demo to get a first-hand sense of the workflow before
-                diving deeper into the product.
-              </p>
-              <a
-                href={product.demoUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-sm font-semibold text-background hover:-translate-y-0.5"
-              >
-                <Play aria-hidden="true" className="size-4" />
-                Open live demo
-              </a>
-            </CardContent>
-          </Card>
-        ) : null}
-
-        {product.submitter?.headline ? (
-          <Card className="editorial-panel">
-            <CardContent className="flex flex-col gap-4 p-7">
-              <p className="eyebrow">Builder context</p>
-              <h2 className="font-heading text-3xl tracking-[-0.04em]">
-                Built by {product.submitter.name}
-              </h2>
-              <p className="text-sm leading-7 text-muted-foreground">
-                {product.submitter.headline}. DevHunt surfaces maker context
-                alongside launch metrics so products read like real companies,
-                not anonymous cards.
-              </p>
-            </CardContent>
-          </Card>
-        ) : null}
-      </div>
+          </div>
+        )}
+      </aside>
     </div>
   );
 }

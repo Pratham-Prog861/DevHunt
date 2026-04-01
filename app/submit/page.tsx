@@ -1,50 +1,55 @@
 import { SubmitProductForm } from "@/components/devhunt/submit-product-form";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 
 export default function SubmitPage() {
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 lg:gap-10">
-      <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card className="overflow-hidden border-none bg-[linear-gradient(135deg,rgba(26,30,51,0.96),rgba(59,73,153,0.92)_58%,rgba(192,153,69,0.72)_160%)] text-white">
-          <CardContent className="flex flex-col gap-6 p-7 md:p-10">
-            <Badge className="w-fit border-white/20 bg-white/10 text-white">
-              Founder submission
-            </Badge>
-            <div className="flex flex-col gap-4">
-              <h1 className="hero-title max-w-4xl text-white">
-                Present your launch like a builder who knows what other builders need.
-              </h1>
-              <p className="max-w-2xl text-base leading-8 text-white/76">
-                Strong submissions are clear, specific, and credible. Explain the
-                problem, the audience, and what makes your product worth opening in the
-                first place.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="editorial-panel">
-          <CardContent className="grid h-full gap-4 p-7">
-            <div className="rounded-[1.6rem] border border-border/70 bg-background/70 p-5">
-              <p className="eyebrow">What performs well</p>
-              <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                Plain-English taglines, credible screenshots, and a description that
-                explains who benefits first.
-              </p>
-            </div>
-            <div className="rounded-[1.6rem] border border-border/70 bg-background/70 p-5">
-              <p className="eyebrow">Best signal</p>
-              <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                The launches that spark comments tend to be concrete, honest, and easy
-                to evaluate quickly.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="flex flex-col gap-8">
+      <section className="flex flex-col gap-4">
+        <h1 className="hero-title">Launch a Product</h1>
+        <p className="text-gray-600 max-w-xl">
+          Present your launch to the community. Strong submissions are clear,
+          specific, and show what makes your product worth trying.
+        </p>
       </section>
 
-      <SubmitProductForm />
+      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+        <SubmitProductForm />
+
+        <aside className="flex flex-col gap-4">
+          <div className="ph-card p-4">
+            <h3 className="font-semibold text-gray-900 mb-3">
+              What makes a great launch
+            </h3>
+            <ul className="space-y-3 text-sm text-gray-600">
+              <li className="flex items-start gap-2">
+                <span className="text-primary font-semibold">1.</span>
+                Clear tagline that explains what your product does
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-primary font-semibold">2.</span>
+                Screenshots that show the actual product experience
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-primary font-semibold">3.</span>
+                Description that explains who benefits first
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-primary font-semibold">4.</span>
+                Honest about what you're building and what's included
+              </li>
+            </ul>
+          </div>
+
+          <div className="ph-card p-4">
+            <h3 className="font-semibold text-gray-900 mb-3">Best practices</h3>
+            <ul className="space-y-2 text-sm text-gray-600">
+              <li>• Engage with comments on your launch day</li>
+              <li>• Share your launch on social media</li>
+              <li>• Be responsive to feedback</li>
+              <li>• Update your product based on user input</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }

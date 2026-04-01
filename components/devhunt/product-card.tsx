@@ -1,134 +1,124 @@
 "use client";
 
+import { memo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUpRight, Bookmark, MessageSquare, Sparkles, TrendingUp } from "lucide-react";
-import { SignInButton, useAuth } from "@clerk/nextjs";
+import { MessageSquare } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatRelativeDate, type ProductListItem } from "@/lib/devhunt";
+import { type ProductListItem } from "@/lib/devhunt";
 
-export function ProductCard({ product }: { product: ProductListItem }) {
+function ProductCardInner({
+  product,
+  showRank,
+}: {
+  product: ProductListItem;
+  showRank?: number;
+}) {
   const { isSignedIn } = useAuth();
   const voteProduct = useMutation(api.social.voteProduct);
-  const toggleBookmark = useMutation(api.social.toggleBookmark);
 
-  const actionButtons = (
-    <div className="flex items-center gap-2">
-      <Button
-        variant={product.viewerHasVoted ? "secondary" : "outline"}
-        className="h-10 gap-2 px-3.5"
-        onClick={() => void voteProduct({ productId: product._id })}
-      >
-        <TrendingUp aria-hidden="true" className="size-4" />
-        {product.votesCount}
-      </Button>
-      <Button
-        variant={product.viewerHasBookmarked ? "secondary" : "ghost"}
-        className="h-10 w-10 rounded-full px-0"
-        aria-label={
-          product.viewerHasBookmarked
-            ? `Remove ${product.name} from saved products`
-            : `Save ${product.name}`
-        }
-        onClick={() => void toggleBookmark({ productId: product._id })}
-      >
-        <Bookmark aria-hidden="true" className="size-4" />
-      </Button>
-    </div>
-  );
+  const [isVoted, setIsVoted] = useState(product.viewerHasVoted);
+  const [votesCount, setVotesCount] = useState(product.votesCount);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  const handleVote = async () => {
+    setIsAnimating(true);
+    const wasVoted = isVoted;
+    setIsVoted(!wasVoted);
+    setVotesCount((prev) => (wasVoted ? prev - 1 : prev + 1));
+
+    try {
+      await voteProduct({ productId: product._id });
+    } catch {
+      setIsVoted(wasVoted);
+      setVotesCount((prev) => (wasVoted ? prev + 1 : prev - 1));
+    }
+
+    setTimeout(() => setIsAnimating(false), 300);
+  };
 
   return (
-    <Card className="hover-rise h-full overflow-hidden border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0.55))]">
-      <CardHeader className="gap-5 pb-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex min-w-0 items-start gap-4">
-            <div className="flex size-[3.75rem] shrink-0 items-center justify-center rounded-[1.6rem] border border-border/70 bg-secondary text-base font-semibold uppercase tracking-[0.14em] text-secondary-foreground">
-              {product.logoUrl ? (
-                <Image
-                  src={product.logoUrl}
-                  alt={product.name}
-                  width={60}
-                  height={60}
-                  className="size-[3.75rem] rounded-[1.5rem] object-cover"
-                />
-              ) : (
-                product.name.slice(0, 2)
-              )}
-            </div>
-            <div className="flex min-w-0 flex-col gap-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge>{product.category}</Badge>
-                {product.isBeginnerFriendly && <Badge>Beginner-friendly</Badge>}
-                {product.isOpenSource && <Badge>Open source</Badge>}
-                {product.isFree && <Badge>Free</Badge>}
-              </div>
-              <Link href={`/products/${product.slug}`} className="group">
-                <CardTitle className="text-2xl group-hover:text-primary">{product.name}</CardTitle>
-              </Link>
-              <CardDescription className="max-w-xl text-[0.98rem]">
-                {product.tagline}
-              </CardDescription>
-            </div>
-          </div>
-          {isSignedIn ? <div className="hidden sm:block">{actionButtons}</div> : null}
-        </div>
-      </CardHeader>
-      <CardContent className="flex h-full flex-col gap-5">
-        <p className="line-clamp-3 text-sm leading-7 text-muted-foreground">
-          {product.description}
-        </p>
+    <div className="group flex items-start gap-4 rounded-lg border border-gray-100 p-3 transition-colors hover:border-gray-200 hover:bg-gray-50">
+      {showRank && (
+        <div className="product-rank w-6 shrink-0 text-center">{showRank}</div>
+      )}
 
-        <div className="grid gap-3 rounded-[1.6rem] border border-border/70 bg-background/65 p-4 sm:grid-cols-3">
-          <div>
-            <p className="eyebrow">Maker</p>
-            <p className="mt-2 text-sm font-medium text-foreground">
-              {product.submitter?.name ?? "Unknown maker"}
-            </p>
-          </div>
-          <div>
-            <p className="eyebrow">Launched</p>
-            <p className="mt-2 text-sm font-medium text-foreground">
-              {formatRelativeDate(product.launchTime ?? product._creationTime)}
-            </p>
-          </div>
-          <div>
-            <p className="eyebrow">Signal</p>
-            <div className="mt-2 flex flex-wrap gap-3 text-sm font-medium text-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <TrendingUp aria-hidden="true" className="size-4 text-primary" />
-                {product.votesCount}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <MessageSquare aria-hidden="true" className="size-4 text-primary" />
-                {product.commentsCount}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Sparkles aria-hidden="true" className="size-4 text-primary" />
-                {product.bookmarksCount}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-auto flex items-center justify-between gap-3">
-          <Link
-            href={`/products/${product.slug}`}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-foreground hover:text-primary"
-          >
-            Read launch notes
-            <ArrowUpRight aria-hidden="true" className="size-4" />
-          </Link>
-          {isSignedIn ? (
-            <div className="sm:hidden">{actionButtons}</div>
+      <Link href={`/products/${product.slug}`} className="shrink-0">
+        <div className="ph-product-thumb flex items-center justify-center overflow-hidden">
+          {product.logoUrl ? (
+            <Image
+              src={product.logoUrl}
+              alt={product.name}
+              width={48}
+              height={48}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
           ) : (
-            <SignInButton mode="modal">{actionButtons}</SignInButton>
+            <span className="text-lg font-semibold uppercase text-gray-400">
+              {product.name.slice(0, 2)}
+            </span>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </Link>
+
+      <div className="min-w-0 flex-1">
+        <Link href={`/products/${product.slug}`} className="block">
+          <h3 className="product-name truncate">{product.name}</h3>
+        </Link>
+        <p className="product-tagline mt-0.5 truncate">{product.tagline}</p>
+
+        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
+          <span className="topic-tag">{product.category}</span>
+          <span>•</span>
+          <span className="inline-flex items-center gap-1">
+            <span className="font-semibold text-primary">{votesCount}</span>{" "}
+            votes
+          </span>
+          <span>•</span>
+          <span className="inline-flex items-center gap-1">
+            <MessageSquare className="size-3.5" />
+            {product.commentsCount}
+          </span>
+        </div>
+      </div>
+
+      {isSignedIn && (
+        <div className="flex shrink-0 gap-1">
+          <Button
+            variant={isVoted ? "default" : "outline"}
+            className={`h-8 w-8 rounded-full p-0 transition-all duration-150 ${
+              isVoted
+                ? "bg-primary hover:bg-primary/90"
+                : "hover:border-primary hover:text-primary"
+            } ${isAnimating ? "scale-125" : ""}`}
+            onClick={handleVote}
+          >
+            <span
+              className={`text-xl font-bold leading-none transition-transform duration-150 ${
+                isVoted ? "text-white" : "text-gray-500"
+              } ${isAnimating ? "scale-125" : ""}`}
+            >
+              +
+            </span>
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export const ProductCard = memo(ProductCardInner);
+
+export function ProductCardList({ products }: { products: ProductListItem[] }) {
+  return (
+    <div className="flex flex-col">
+      {products.map((product, index) => (
+        <ProductCard key={product._id} product={product} showRank={index + 1} />
+      ))}
+    </div>
   );
 }

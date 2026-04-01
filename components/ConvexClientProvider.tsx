@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useRef } from "react";
+import { ReactNode, useEffect, useRef, useMemo } from "react";
 import type { FunctionReference } from "convex/server";
 import { ConvexReactClient, useMutation } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
@@ -8,7 +8,8 @@ import { useAuth, useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
-const syncCurrentUserRef: FunctionReference<"mutation"> = api.users.syncCurrentUser;
+const syncCurrentUserRef: FunctionReference<"mutation"> =
+  api.users.syncCurrentUser;
 
 function AuthSync() {
   const { isSignedIn } = useAuth();
@@ -41,8 +42,10 @@ export default function ConvexClientProvider({
 }: {
   children: ReactNode;
 }) {
+  const convexClient = useMemo(() => convex, []);
+
   return (
-    <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+    <ConvexProviderWithClerk client={convexClient} useAuth={useAuth}>
       <AuthSync />
       {children}
     </ConvexProviderWithClerk>

@@ -30,7 +30,31 @@ export const voteProduct = mutation({
       .unique();
 
     if (existing) {
-      throw new ConvexError("You have already upvoted this product.");
+      await ctx.db.delete(existing._id);
+      await ctx.db.patch(viewer._id, {
+        upvotesGivenCount: Math.max(0, viewer.upvotesGivenCount - 1),
+      });
+
+      const updatedVotes = Math.max(0, product.votesCount - 1);
+      const today = getDateKey(Date.now());
+      const updatedProduct = {
+        ...product,
+        votesCount: updatedVotes,
+        dayVotes:
+          product.launchDateKey === today
+            ? Math.max(0, product.dayVotes - 1)
+            : product.dayVotes,
+      };
+
+      await ctx.db.patch(product._id, {
+        votesCount: updatedVotes,
+        dayVotes: updatedProduct.dayVotes,
+        trendingScore: computeTrendingScore(updatedProduct),
+        engagementScore: computeEngagementScore(updatedProduct),
+        weeklyScore: computeWeeklyScore(updatedProduct),
+      });
+
+      return { voted: false };
     }
 
     await ctx.db.insert("votes", {
@@ -48,7 +72,10 @@ export const voteProduct = mutation({
     const updatedProduct = {
       ...product,
       votesCount: updatedVotes,
-      dayVotes: product.launchDateKey === today ? product.dayVotes + 1 : product.dayVotes,
+      dayVotes:
+        product.launchDateKey === today
+          ? product.dayVotes + 1
+          : product.dayVotes,
     };
 
     await ctx.db.patch(product._id, {
@@ -69,6 +96,8 @@ export const voteProduct = mutation({
         isRead: false,
       });
     }
+
+    return { voted: true };
   },
 });
 
@@ -339,11 +368,15 @@ export const collections = query({
     );
 
     const existingProducts = products
-      .filter((product): product is NonNullable<typeof product> => Boolean(product))
+      .filter((product): product is NonNullable<typeof product> =>
+        Boolean(product),
+      )
       .sort((a, b) => b._creationTime - a._creationTime);
 
     return Promise.all(
-      existingProducts.map((product) => enrichProduct(ctx, product, viewer._id)),
+      existingProducts.map((product) =>
+        enrichProduct(ctx, product, viewer._id),
+      ),
     );
   },
 });

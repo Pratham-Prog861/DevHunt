@@ -5,6 +5,7 @@ import {
   MAX_GALLERY_IMAGES,
   MAX_TAGLINE_LENGTH,
   PRODUCT_CATEGORIES,
+  DAY_IN_MS,
 } from "./constants";
 import {
   assertValidCategory,
@@ -124,11 +125,15 @@ export const listProducts = query({
     const allProducts = await ctx.db.query("products").collect();
     const search = args.search?.trim().toLowerCase();
     const category = args.category?.trim();
-    const sort = (args.sort && sortOptions.includes(args.sort as never)
-      ? args.sort
-      : "trending") as (typeof sortOptions)[number];
+    const sort = (
+      args.sort && sortOptions.includes(args.sort as never)
+        ? args.sort
+        : "trending"
+    ) as (typeof sortOptions)[number];
 
-    let filtered = allProducts.filter((product) => product.status === "published");
+    let filtered = allProducts.filter(
+      (product) => product.status === "published",
+    );
 
     if (category && PRODUCT_CATEGORIES.includes(category as never)) {
       filtered = filtered.filter((product) => product.category === category);
@@ -136,13 +141,16 @@ export const listProducts = query({
 
     if (search) {
       filtered = filtered.filter((product) => {
-        const haystack = `${product.name} ${product.tagline} ${product.category}`.toLowerCase();
+        const haystack =
+          `${product.name} ${product.tagline} ${product.category}`.toLowerCase();
         return haystack.includes(search);
       });
     }
 
     if (sort === "newest") {
-      filtered.sort((a, b) => getProductLaunchTime(b) - getProductLaunchTime(a));
+      filtered.sort(
+        (a, b) => getProductLaunchTime(b) - getProductLaunchTime(a),
+      );
     } else if (sort === "hiddenGems") {
       const now = Date.now();
       filtered = filtered.filter(
@@ -156,7 +164,9 @@ export const listProducts = query({
     }
 
     return Promise.all(
-      filtered.slice(0, 36).map((product) => enrichProduct(ctx, product, viewer?._id)),
+      filtered
+        .slice(0, 36)
+        .map((product) => enrichProduct(ctx, product, viewer?._id)),
     );
   },
 });
@@ -166,9 +176,14 @@ export const home = query({
   handler: async (ctx) => {
     const viewer = await maybeViewer(ctx);
     const products = await ctx.db.query("products").collect();
-    const published = products.filter((product) => product.status === "published");
-    const makerCount = new Set(published.map((product) => String(product.submitterId))).size;
-    const categoryCount = new Set(published.map((product) => product.category)).size;
+    const published = products.filter(
+      (product) => product.status === "published",
+    );
+    const makerCount = new Set(
+      published.map((product) => String(product.submitterId)),
+    ).size;
+    const categoryCount = new Set(published.map((product) => product.category))
+      .size;
     const discussionCount = published.reduce(
       (total, product) => total + product.commentsCount,
       0,
@@ -196,8 +211,9 @@ export const home = query({
         categoryCount,
         discussionCount,
       },
-      spotlight:
-        trending[0] ? await enrichProduct(ctx, trending[0], viewer?._id) : null,
+      spotlight: trending[0]
+        ? await enrichProduct(ctx, trending[0], viewer?._id)
+        : null,
       trending: await Promise.all(
         trending.map((product) => enrichProduct(ctx, product, viewer?._id)),
       ),
@@ -238,34 +254,95 @@ export const getProduct = query({
   },
 });
 
+export type TimeFilter =
+  | "today"
+  | "yesterday"
+  | "thisWeek"
+  | "thisMonth"
+  | "thisYear";
+
+function getTimeFilterKeys(filter: TimeFilter) {
+  const now = Date.now();
+  const today = getDateKey(now);
+  const yesterday = getDateKey(now - DAY_IN_MS);
+  const week = getWeekKey(now);
+
+  const date = new Date(now);
+  const year = date.getFullYear();
+  const monthStart = new Date(year, date.getMonth(), 1);
+  const yearStart = new Date(year, 0, 1);
+
+  return {
+    today,
+    yesterday,
+    week,
+    monthStart: monthStart.getTime(),
+    yearStart: yearStart.getTime(),
+  };
+}
+
 export const leaderboard = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    timeFilter: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
     const viewer = await maybeViewer(ctx);
     const products = await ctx.db.query("products").collect();
-    const today = getDateKey(Date.now());
-    const week = getWeekKey(Date.now());
+    const now = Date.now();
+    const { today, yesterday, week, monthStart, yearStart } = getTimeFilterKeys(
+      (args.timeFilter as TimeFilter) || "today",
+    );
 
-    const daily = products
+    const filteredByTime = products.filter((product) => {
+      const launchTime = getProductLaunchTime(product);
+      const launchDate = new Date(launchTime);
+
+      switch (args.timeFilter) {
+        case "today":
+          return product.launchDateKey === today;
+        case "yesterday":
+          return product.launchDateKey === yesterday;
+        case "thisWeek":
+          return product.weeklyDateKey === week;
+        case "thisMonth":
+          return launchTime >= monthStart;
+        case "thisYear":
+          return launchTime >= yearStart;
+        default:
+          return product.launchDateKey === today;
+      }
+    });
+
+    const daily = filteredByTime
       .filter((product) => product.launchDateKey === today)
       .sort((a, b) => {
         if (b.dayVotes !== a.dayVotes) return b.dayVotes - a.dayVotes;
-        if (b.dayComments !== a.dayComments) return b.dayComments - a.dayComments;
+        if (b.dayComments !== a.dayComments)
+          return b.dayComments - a.dayComments;
         return getProductLaunchTime(a) - getProductLaunchTime(b);
       })
       .slice(0, 10);
 
-    const weekly = products
+    const weekly = filteredByTime
       .filter((product) => product.weeklyDateKey === week)
       .sort((a, b) => b.weeklyScore - a.weeklyScore)
       .slice(0, 10);
 
+    const dailyProducts =
+      daily.length > 0 ? daily : filteredByTime.slice(0, 10);
+    const weeklyProducts =
+      weekly.length > 0 ? weekly : filteredByTime.slice(0, 10);
+
     return {
       daily: await Promise.all(
-        daily.map((product) => enrichProduct(ctx, product, viewer?._id)),
+        dailyProducts.map((product) =>
+          enrichProduct(ctx, product, viewer?._id),
+        ),
       ),
       weekly: await Promise.all(
-        weekly.map((product) => enrichProduct(ctx, product, viewer?._id)),
+        weeklyProducts.map((product) =>
+          enrichProduct(ctx, product, viewer?._id),
+        ),
       ),
     };
   },

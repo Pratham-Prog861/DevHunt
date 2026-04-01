@@ -5,9 +5,7 @@ import { SignInButton, useAuth } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { AccessibleField } from "@/components/ui/accessible-field";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { formatRelativeDate, type CommentItem } from "@/lib/devhunt";
 
@@ -60,126 +58,119 @@ export function CommentThread({ productId }: CommentThreadProps) {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Discussion</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <AccessibleField id="comment-body" label="Add a comment" srOnlyLabel>
-            <Textarea
-              id="comment-body"
-              name="comment"
-              value={body}
-              onChange={(event) => setBody(event.target.value)}
-              placeholder="What stood out to you about this product?"
-            />
-          </AccessibleField>
+    <div className="flex flex-col gap-4">
+      <h2 className="section-title">Discussion ({comments?.length ?? 0})</h2>
+
+      <div className="ph-card p-4">
+        <Textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="What did you think of this product?"
+          className="min-h-[80px] border-gray-200 focus:border-primary"
+        />
+        <div className="mt-3">
           {isSignedIn ? (
-            <Button className="w-fit" onClick={() => void submitComment()}>
+            <Button
+              onClick={() => void submitComment()}
+              disabled={!body.trim()}
+              className="bg-gray-900 hover:bg-gray-800"
+            >
               Post comment
             </Button>
           ) : (
             <SignInButton mode="modal">
-              <Button className="w-fit">Sign in to comment</Button>
+              <Button className="bg-gray-900 hover:bg-gray-800">
+                Sign in to comment
+              </Button>
             </SignInButton>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         {roots.map((comment) => {
           const replies = repliesByParent.get(comment._id) ?? [];
 
           return (
-            <Card key={comment._id}>
-              <CardContent className="flex flex-col gap-4 pt-6">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="font-medium">
-                      {comment.author?.name ?? "Developer"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      @{comment.author?.username ?? "maker"} {"\u2022"}{" "}
-                      {formatRelativeDate(comment._creationTime)}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    className="text-xs"
-                    aria-label={`Reply to ${comment.author?.name ?? "Developer"}`}
-                    onClick={() =>
-                      setReplyTarget((current) =>
-                        current === comment._id ? null : comment._id,
-                      )
-                    }
-                  >
-                    Reply
-                  </Button>
+            <div key={comment._id} className="ph-card p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="font-medium text-gray-900">
+                    {comment.author?.name ?? "Developer"}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    @{comment.author?.username ?? "maker"} ·{" "}
+                    {formatRelativeDate(comment._creationTime)}
+                  </p>
                 </div>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  {comment.body}
-                </p>
+                <Button
+                  variant="ghost"
+                  className="text-xs text-gray-500 hover:text-gray-900"
+                  onClick={() =>
+                    setReplyTarget((current) =>
+                      current === comment._id ? null : comment._id,
+                    )
+                  }
+                >
+                  Reply
+                </Button>
+              </div>
+              <p className="text-sm text-gray-700 leading-relaxed">
+                {comment.body}
+              </p>
 
-                {replyTarget === comment._id && (
-                  <div className="flex flex-col gap-3 rounded-3xl bg-secondary/70 p-4">
-                    <AccessibleField
-                      id={`reply-body-${comment._id}`}
-                      label="Write a reply"
-                      srOnlyLabel
+              {replyTarget === comment._id && (
+                <div className="mt-3 flex flex-col gap-2 rounded-lg bg-gray-50 p-3">
+                  <Textarea
+                    value={replyBody}
+                    onChange={(e) => setReplyBody(e.target.value)}
+                    placeholder="Write a reply..."
+                    className="min-h-[60px] border-gray-200 focus:border-primary text-sm"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => void submitReply()}
+                      disabled={!replyBody.trim()}
+                      className="bg-gray-900 hover:bg-gray-800 h-8"
                     >
-                      <Textarea
-                        id={`reply-body-${comment._id}`}
-                        name={`reply-${comment._id}`}
-                        value={replyBody}
-                        onChange={(event) => setReplyBody(event.target.value)}
-                        placeholder="Write a thoughtful reply"
-                        className="min-h-24 bg-background"
-                      />
-                    </AccessibleField>
-                    {isSignedIn ? (
-                      <Button
-                        className="w-fit"
-                        onClick={() => void submitReply()}
-                      >
-                        Reply
-                      </Button>
-                    ) : (
-                      <SignInButton mode="modal">
-                        <Button className="w-fit">Sign in to reply</Button>
-                      </SignInButton>
-                    )}
+                      Reply
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setReplyTarget(null);
+                        setReplyBody("");
+                      }}
+                      className="h-8"
+                    >
+                      Cancel
+                    </Button>
                   </div>
-                )}
+                </div>
+              )}
 
-                {replies.length > 0 && (
-                  <div className="ml-4 flex flex-col gap-3 border-l border-border pl-4">
-                    {replies.map((reply) => (
-                      <div
-                        key={reply._id}
-                        className="rounded-3xl bg-secondary/40 p-4"
-                      >
-                        <p className="text-sm font-medium">
-                          {reply.author?.name ?? "Developer"}
-                        </p>
-                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                          {reply.body}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+              {replies.length > 0 && (
+                <div className="ml-4 mt-3 flex flex-col gap-2 border-l-2 border-gray-100 pl-4">
+                  {replies.map((reply) => (
+                    <div key={reply._id} className="rounded-lg bg-gray-50 p-3">
+                      <p className="text-sm font-medium text-gray-900">
+                        {reply.author?.name ?? "Developer"}
+                      </p>
+                      <p className="mt-1 text-sm text-gray-600">{reply.body}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           );
         })}
 
-        {comments && comments.length === 0 && (
-          <Card>
-            <CardContent className="pt-6 text-sm text-muted-foreground">
-              No comments yet. Be the first developer to share feedback.
-            </CardContent>
-          </Card>
+        {(!comments || comments.length === 0) && (
+          <div className="ph-card p-8 text-center">
+            <p className="text-gray-500">
+              No comments yet. Be the first to share your thoughts!
+            </p>
+          </div>
         )}
       </div>
     </div>
