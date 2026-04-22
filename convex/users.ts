@@ -26,9 +26,9 @@ export const getProfile = query({
       .unique();
     const byId = byUsername
       ? null
-      : (await ctx.db.query("users").collect()).find(
+      : ((await ctx.db.query("users").collect()).find(
           (candidate) => String(candidate._id) === args.handle,
-        ) ?? null;
+        ) ?? null);
     const user = byUsername ?? byId;
 
     if (!user || !user.isActive) {
@@ -38,11 +38,20 @@ export const getProfile = query({
     const submittedProducts = await ctx.db
       .query("products")
       .collect()
-      .then((products) =>
-        products
-          .filter((product) => product.submitterId === user._id)
-          .sort((a, b) => getProductLaunchTime(b) - getProductLaunchTime(a))
-          .slice(0, 12),
+      .then(
+        (products) =>
+          products
+            .filter((product) => {
+              const isOwner = viewer?._id === user._id;
+              const isSubmitter = product.submitterId === user._id;
+              if (!isSubmitter) return false;
+              return (
+                product.status === "published" ||
+                (isOwner && product.status === "archived")
+              );
+            })
+            .sort((a, b) => getProductLaunchTime(b) - getProductLaunchTime(a))
+            .slice(0, 24), // Increased slice to show more products if some are archived
       );
 
     const totalVotes = submittedProducts.reduce(
@@ -53,7 +62,9 @@ export const getProfile = query({
       (sum, product) => sum + product.commentsCount,
       0,
     );
-    const categories = new Set(submittedProducts.map((product) => product.category));
+    const categories = new Set(
+      submittedProducts.map((product) => product.category),
+    );
 
     return {
       user,
@@ -64,7 +75,9 @@ export const getProfile = query({
         totalSignal: totalVotes + totalComments + submittedProducts.length,
       },
       submittedProducts: await Promise.all(
-        submittedProducts.map((product) => enrichProduct(ctx, product, viewer?._id)),
+        submittedProducts.map((product) =>
+          enrichProduct(ctx, product, viewer?._id),
+        ),
       ),
     };
   },
@@ -81,7 +94,9 @@ export const upsertUserFromWebhook = mutation({
   },
   handler: async (ctx, args) => {
     if (!process.env.CLERK_WEBHOOK_SECRET) {
-      throw new ConvexError("CLERK_WEBHOOK_SECRET is not configured in Convex.");
+      throw new ConvexError(
+        "CLERK_WEBHOOK_SECRET is not configured in Convex.",
+      );
     }
 
     if (args.webhookSecret !== process.env.CLERK_WEBHOOK_SECRET) {
@@ -146,10 +161,7 @@ export const syncCurrentUser = mutation({
       identity.email?.split("@")[0] ||
       identity.subject;
     const name =
-      args.name?.trim() ||
-      identity.name ||
-      identity.email ||
-      "Developer";
+      args.name?.trim() || identity.name || identity.email || "Developer";
     const imageUrl = args.imageUrl?.trim() || identity.pictureUrl || "";
 
     if (existing) {

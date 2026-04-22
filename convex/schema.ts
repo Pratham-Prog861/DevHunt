@@ -90,6 +90,7 @@ export default defineSchema({
   })
     .index("by_seed_id", ["seedId"])
     .index("by_user", ["userId"])
+    .index("by_product", ["productId"])
     .index("by_user_product", ["userId", "productId"]),
 
   notifications: defineTable({

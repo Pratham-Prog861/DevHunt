@@ -26,7 +26,11 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PRODUCT_CATEGORIES, uploadFile } from "@/lib/devhunt";
+import {
+  PRODUCT_CATEGORIES,
+  uploadFile,
+  type ProductDetail,
+} from "@/lib/devhunt";
 import { Id } from "@/convex/_generated/dataModel";
 
 type SubmitFormState = {
@@ -117,12 +121,36 @@ function validateForm(form: SubmitFormState, galleryFiles: File[]) {
   return errors;
 }
 
-export function SubmitProductForm() {
+interface SubmitProductFormProps {
+  product?: ProductDetail;
+}
+
+export function SubmitProductForm({ product }: SubmitProductFormProps) {
   const router = useRouter();
   const generateUploadUrl = useMutation(api.products.generateUploadUrl);
   const createProduct = useMutation(api.products.createProduct);
+  const updateProduct = useMutation(api.products.updateProduct);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [form, setForm] = useState<SubmitFormState>(initialForm);
+
+  const editInitialForm: SubmitFormState = useMemo(
+    () =>
+      product
+        ? {
+            name: product.name,
+            tagline: product.tagline,
+            description: product.description,
+            websiteUrl: product.websiteUrl,
+            category: product.category,
+            demoUrl: product.demoUrl || "",
+            isBeginnerFriendly: product.isBeginnerFriendly,
+            isOpenSource: product.isOpenSource,
+            isFree: product.isFree,
+          }
+        : initialForm,
+    [product],
+  );
+
+  const [form, setForm] = useState<SubmitFormState>(editInitialForm);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [errors, setErrors] = useState<SubmitFormErrors>({});
@@ -133,10 +161,10 @@ export function SubmitProductForm() {
   const taglineCount = form.tagline.length;
   const isDirty = useMemo(
     () =>
-      JSON.stringify(form) !== JSON.stringify(initialForm) ||
+      JSON.stringify(form) !== JSON.stringify(editInitialForm) ||
       logoFile !== null ||
       galleryFiles.length > 0,
-    [form, galleryFiles.length, logoFile],
+    [form, galleryFiles.length, logoFile, editInitialForm],
   );
 
   useEffect(() => {
@@ -193,26 +221,51 @@ export function SubmitProductForm() {
     setIsSubmitting(true);
 
     try {
-      const logoStorageId = logoFile
-        ? ((await uploadFile(
-            await generateUploadUrl({}),
-            logoFile,
-          )) as Id<"_storage">)
-        : undefined;
+      let logoStorageId: Id<"_storage"> | undefined;
+      if (logoFile) {
+        const uploadUrl = await generateUploadUrl({});
+        logoStorageId = (await uploadFile(
+          uploadUrl,
+          logoFile,
+        )) as Id<"_storage">;
+      }
 
-      const galleryStorageIds = (await Promise.all(
-        galleryFiles.map(async (file) => {
-          const uploadUrl = await generateUploadUrl({});
-          return uploadFile(uploadUrl, file);
-        }),
-      )) as Id<"_storage">[];
+      const galleryStorageIds = (
+        await Promise.all(
+          galleryFiles.map(async (file) => {
+            const uploadUrl = await generateUploadUrl({});
+            return uploadFile(uploadUrl, file);
+          }),
+        )
+      ).filter(Boolean) as Id<"_storage">[];
 
-      const result = await createProduct({
-        ...form,
-        demoUrl: form.demoUrl || undefined,
-        logoStorageId,
-        galleryStorageIds,
-      });
+      let result;
+      if (product) {
+        // Edit mode
+        const finalLogoId =
+          logoStorageId ||
+          (product.logoStorageId as Id<"_storage"> | undefined);
+        const finalGalleryIds =
+          galleryStorageIds.length > 0
+            ? galleryStorageIds
+            : (product.galleryStorageIds as Id<"_storage">[]);
+
+        result = await updateProduct({
+          ...form,
+          productId: product._id as Id<"products">,
+          demoUrl: form.demoUrl || undefined,
+          logoStorageId: finalLogoId,
+          galleryStorageIds: finalGalleryIds,
+        });
+      } else {
+        // Create mode
+        result = await createProduct({
+          ...form,
+          demoUrl: form.demoUrl || undefined,
+          logoStorageId: logoStorageId || undefined,
+          galleryStorageIds,
+        });
+      }
 
       startTransition(() => {
         router.push(`/products/${result.slug}`);
@@ -225,10 +278,15 @@ export function SubmitProductForm() {
   return (
     <Card className="border-border/60">
       <CardHeader>
-        <CardTitle>Ship your product in front of developers</CardTitle>
+        <CardTitle>
+          {product
+            ? `Editing ${product.name}`
+            : "Ship your product in front of developers"}
+        </CardTitle>
         <CardDescription>
-          Focus on what it solves, who it helps, and what makes it worth
-          exploring.
+          {product
+            ? "Update your product details to keep development community informed."
+            : "Focus on what it solves, who it helps, and what makes it worth exploring."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -442,7 +500,13 @@ export function SubmitProductForm() {
           </div>
 
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Submitting…" : "Launch on DevHunt"}
+            {isSubmitting
+              ? product
+                ? "Updating…"
+                : "Submitting…"
+              : product
+                ? "Update Product"
+                : "Launch on DevHunt"}
           </Button>
         </form>
       </CardContent>

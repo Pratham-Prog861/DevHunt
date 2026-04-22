@@ -11,13 +11,29 @@ import {
   MessageSquare,
   Calendar,
   User,
+  Pencil,
+  Archive,
+  Trash2,
+  EyeOff,
 } from "lucide-react";
 import { SignInButton, useAuth } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import { CommentThread } from "@/components/devhunt/comment-thread";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { formatRelativeDate, type ProductDetail } from "@/lib/devhunt";
 
 export default function ProductDetailPage({
@@ -26,13 +42,17 @@ export default function ProductDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = use(params);
+  const router = useRouter();
   const { isSignedIn } = useAuth();
+  const viewer = useQuery(api.users.currentViewer);
   const product = useQuery(api.products.getProduct, { slug }) as
     | ProductDetail
     | null
     | undefined;
   const voteProduct = useMutation(api.social.voteProduct);
   const toggleBookmark = useMutation(api.social.toggleBookmark);
+  const archiveProduct = useMutation(api.products.archiveProduct);
+  const deleteProduct = useMutation(api.products.deleteProduct);
 
   if (product === null) {
     return (
@@ -49,6 +69,18 @@ export default function ProductDetailPage({
       </div>
     );
   }
+
+  const isOwner = viewer?._id === product.submitterId;
+  const isArchived = product.status === "archived";
+
+  const handleArchive = async () => {
+    await archiveProduct({ productId: product._id, archived: !isArchived });
+  };
+
+  const handleDelete = async () => {
+    await deleteProduct({ productId: product._id });
+    router.push("/");
+  };
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_300px]">
@@ -83,8 +115,14 @@ export default function ProductDetailPage({
                 {product.isFree && <span className="ph-badge">Free</span>}
               </div>
 
-              <h1 className="hero-title text-2xl sm:text-3xl">
+              <h1 className="hero-title text-2xl sm:text-3xl flex items-center gap-3">
                 {product.name}
+                {isArchived && (
+                  <Badge className="bg-amber-50 text-amber-700 border-amber-200 gap-1 px-2 py-0.5 text-xs font-bold uppercase tracking-wider">
+                    <EyeOff className="size-3" />
+                    Archived
+                  </Badge>
+                )}
               </h1>
               <p className="mt-1 text-gray-600">{product.tagline}</p>
             </div>
@@ -173,6 +211,85 @@ export default function ProductDetailPage({
       </div>
 
       <aside className="flex flex-col gap-4">
+        {isOwner && (
+          <div className="ph-card p-4 border-amber-200 bg-amber-50/30">
+            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              Management
+            </h3>
+            <div className="grid grid-cols-1 gap-2">
+              <Link href={`/products/edit/${product.slug}`} className="w-full">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start gap-2 h-9"
+                >
+                  <Pencil className="size-4" />
+                  Edit details
+                </Button>
+              </Link>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={`w-full justify-start gap-2 h-9 ${isArchived ? "bg-white text-amber-700 border-amber-200" : ""}`}
+                  >
+                    <Archive className="size-4" />
+                    {isArchived ? "Publish product" : "Archive product"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Are you absolutely sure?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {isArchived
+                        ? "This will make your product visible to the public again."
+                        : "This will hide your product from public view. You can undo this later."}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleArchive}>
+                      Continue
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-2 h-9 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200"
+                  >
+                    <Trash2 className="size-4" />
+                    Delete permanently
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Are you absolutely sure?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete
+                      your product and remove its data from our servers.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </div>
+        )}
+
         <div className="ph-card p-4">
           <h3 className="font-semibold text-gray-900 mb-4">Product info</h3>
           <div className="space-y-3">

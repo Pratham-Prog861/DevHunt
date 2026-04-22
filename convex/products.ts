@@ -114,6 +114,182 @@ export const createProduct = mutation({
   },
 });
 
+export const updateProduct = mutation({
+  args: {
+    productId: v.id("products"),
+    name: v.string(),
+    tagline: v.string(),
+    description: v.string(),
+    websiteUrl: v.string(),
+    category: v.string(),
+    demoUrl: v.optional(v.string()),
+    logoStorageId: v.optional(v.id("_storage")),
+    galleryStorageIds: v.array(v.id("_storage")),
+    isBeginnerFriendly: v.boolean(),
+    isOpenSource: v.boolean(),
+    isFree: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const viewer = await requireViewer(ctx);
+    const product = await ctx.db.get(args.productId);
+
+    if (!product) {
+      throw new ConvexError("Product not found.");
+    }
+
+    if (product.submitterId !== viewer._id) {
+      throw new ConvexError("You are not authorized to update this product.");
+    }
+
+    if (args.tagline.length > MAX_TAGLINE_LENGTH) {
+      throw new ConvexError("Tagline is too long.");
+    }
+    if (args.description.length > MAX_DESCRIPTION_LENGTH) {
+      throw new ConvexError("Description is too long.");
+    }
+    if (args.galleryStorageIds.length > MAX_GALLERY_IMAGES) {
+      throw new ConvexError("Too many gallery images.");
+    }
+
+    assertValidCategory(args.category);
+
+    const patch: Partial<typeof product> = {
+      name: args.name.trim(),
+      tagline: args.tagline.trim(),
+      description: args.description.trim(),
+      websiteUrl: args.websiteUrl.trim(),
+      category: args.category,
+      galleryStorageIds: args.galleryStorageIds,
+      isBeginnerFriendly: args.isBeginnerFriendly,
+      isOpenSource: args.isOpenSource,
+      isFree: args.isFree,
+      logoStorageId: args.logoStorageId,
+      demoUrl: args.demoUrl?.trim() || undefined,
+    };
+
+    // Update slug only if name changed
+    if (args.name.trim() !== product.name) {
+      const baseSlug = slugifyProductName(args.name);
+      if (baseSlug) {
+        const existing = await getProductBySlug(ctx, baseSlug);
+        if (existing && existing._id !== product._id) {
+          // Keep old slug if new name matches another product's slug
+        } else {
+          patch.slug = baseSlug;
+        }
+      }
+    }
+
+    await ctx.db.patch(args.productId, {
+      ...patch,
+      trendingScore: computeTrendingScore({ ...product, ...patch }),
+      engagementScore: computeEngagementScore({ ...product, ...patch }),
+      weeklyScore: computeWeeklyScore({ ...product, ...patch }),
+    });
+
+    const updated = await ctx.db.get(args.productId);
+    return { productId: args.productId, slug: updated!.slug };
+  },
+});
+
+export const deleteProduct = mutation({
+  args: {
+    productId: v.id("products"),
+  },
+  handler: async (ctx, args) => {
+    const viewer = await requireViewer(ctx);
+    const product = await ctx.db.get(args.productId);
+
+    if (!product) {
+      throw new ConvexError("Product not found.");
+    }
+
+    if (product.submitterId !== viewer._id) {
+      throw new ConvexError("You are not authorized to delete this product.");
+    }
+
+    // 1. Delete associated votes
+    const votes = await ctx.db
+      .query("votes")
+      .withIndex("by_product", (q) => q.eq("productId", args.productId))
+      .collect();
+    for (const vote of votes) {
+      // Potentially update user upvotesGivenCount here if needed
+      await ctx.db.delete(vote._id);
+    }
+
+    // 2. Delete associated comments
+    const comments = await ctx.db
+      .query("comments")
+      .withIndex("by_product", (q) => q.eq("productId", args.productId))
+      .collect();
+    for (const comment of comments) {
+      await ctx.db.delete(comment._id);
+    }
+
+    // 3. Delete associated bookmarks
+    const bookmarks = await ctx.db
+      .query("bookmarks")
+      .withIndex("by_product", (q) => q.eq("productId", args.productId))
+      .collect();
+    for (const bookmark of bookmarks) {
+      await ctx.db.delete(bookmark._id);
+    }
+
+    // 4. Delete associated notifications
+    const notifications = await ctx.db
+      .query("notifications")
+      .filter((q) => q.eq(q.field("productId"), args.productId))
+      .collect();
+    for (const notification of notifications) {
+      await ctx.db.delete(notification._id);
+    }
+
+    // 5. Delete product logo and gallery from storage (optional but good practice)
+    if (product.logoStorageId) {
+      await ctx.storage.delete(product.logoStorageId);
+    }
+    for (const storageId of product.galleryStorageIds) {
+      await ctx.storage.delete(storageId);
+    }
+
+    // 6. Delete product
+    await ctx.db.delete(args.productId);
+
+    // 7. Update submitter's count
+    await ctx.db.patch(viewer._id, {
+      submittedCount: Math.max(0, viewer.submittedCount - 1),
+    });
+
+    return { success: true };
+  },
+});
+
+export const archiveProduct = mutation({
+  args: {
+    productId: v.id("products"),
+    archived: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const viewer = await requireViewer(ctx);
+    const product = await ctx.db.get(args.productId);
+
+    if (!product) {
+      throw new ConvexError("Product not found.");
+    }
+
+    if (product.submitterId !== viewer._id) {
+      throw new ConvexError("You are not authorized to archive this product.");
+    }
+
+    await ctx.db.patch(args.productId, {
+      status: args.archived ? "archived" : "published",
+    });
+
+    return { success: true };
+  },
+});
+
 export const listProducts = query({
   args: {
     search: v.optional(v.string()),
@@ -261,7 +437,7 @@ export type TimeFilter =
   | "thisMonth"
   | "thisYear";
 
-function getTimeFilterKeys(filter: TimeFilter) {
+function getTimeFilterKeys() {
   const now = Date.now();
   const today = getDateKey(now);
   const yesterday = getDateKey(now - DAY_IN_MS);
@@ -288,14 +464,11 @@ export const leaderboard = query({
   handler: async (ctx, args) => {
     const viewer = await maybeViewer(ctx);
     const products = await ctx.db.query("products").collect();
-    const now = Date.now();
-    const { today, yesterday, week, monthStart, yearStart } = getTimeFilterKeys(
-      (args.timeFilter as TimeFilter) || "today",
-    );
+    const { today, yesterday, week, monthStart, yearStart } =
+      getTimeFilterKeys();
 
     const filteredByTime = products.filter((product) => {
       const launchTime = getProductLaunchTime(product);
-      const launchDate = new Date(launchTime);
 
       switch (args.timeFilter) {
         case "today":
