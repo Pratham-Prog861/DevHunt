@@ -376,34 +376,46 @@ function PremiumLandingPage() {
     <div className="-mx-4 -my-6 flex flex-col bg-white overflow-x-hidden">
       <section
         ref={heroRef}
-        className="relative overflow-hidden bg-gradient-to-b from-white via-gray-50 to-gray-100 px-4 py-24 sm:px-6 sm:py-32 lg:px-8"
+        className="relative overflow-hidden bg-gray-950 px-4 py-24 sm:px-6 sm:py-32 lg:px-8"
       >
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-1/2 -right-1/4 h-[800px] w-[800px] rounded-full bg-gradient-to-bl from-orange-100 via-amber-50 to-transparent opacity-60" />
-          <div className="absolute -bottom-1/2 -left-1/4 h-[600px] w-[600px] rounded-full bg-gradient-to-tr from-orange-100 via-amber-50 to-transparent opacity-50" />
+          <video
+            className="absolute inset-0 h-full w-full object-cover"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="metadata"
+          >
+            <source src="/video.mp4" type="video/mp4" />
+          </video>
+          <div className="absolute inset-0 bg-linear-to-b from-gray-950/80 via-gray-950/65 to-gray-950/85" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(251,146,60,0.22),transparent_42%),radial-gradient(circle_at_80%_70%,rgba(245,158,11,0.2),transparent_45%)]" />
+          <div className="absolute -top-1/2 -right-1/4 h-200 w-200 rounded-full bg-linear-to-bl from-orange-400/20 via-amber-300/10 to-transparent blur-3xl" />
+          <div className="absolute -bottom-1/2 -left-1/4 h-150 w-150 rounded-full bg-linear-to-tr from-orange-400/20 via-amber-300/10 to-transparent blur-3xl" />
         </div>
 
         <div className="ph-container relative">
           <div className="flex flex-col items-center text-center max-w-4xl mx-auto py-12">
             <div className="hero-content flex flex-col items-center">
-              <div className="relative z-10 inline-flex w-fit items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-1.5 text-sm text-orange-700 shadow-sm mb-2 self-center floating-badge">
+              <div className="relative z-10 inline-flex w-fit items-center gap-2 rounded-full border border-orange-300/35 bg-orange-100/10 px-4 py-1.5 text-sm text-orange-100 shadow-sm mb-2 self-center floating-badge backdrop-blur-sm">
                 <Sparkles className="size-4 text-orange-500" />
                 <span>Discover new products daily</span>
               </div>
-              <h1 className="mt-10 font-heading text-5xl font-semibold leading-tight tracking-tight text-gray-900 sm:text-6xl lg:text-7xl">
+              <h1 className="mt-10 font-heading text-5xl font-semibold leading-tight tracking-tight text-white sm:text-6xl lg:text-7xl">
                 The best new
                 <br />
-                <span className="text-orange-600">products in tech</span>
+                <span className="text-orange-300">products in tech</span>
               </h1>
 
-              <p className="mt-6 max-w-2xl text-lg leading-relaxed text-gray-600">
+              <p className="mt-6 max-w-2xl text-lg leading-relaxed text-gray-100/90">
                 DevHunt is where makers launch and users discover the next
                 generation of developer tools.
               </p>
 
               <div className="mt-10 flex flex-col gap-4 sm:flex-row justify-center">
                 <SignUpButton mode="modal">
-                  <Button className="bg-gray-900 text-white hover:bg-gray-800 group-hover:scale-105 transition-transform px-8 h-12 text-base">
+                  <Button className="bg-white text-gray-900 hover:bg-gray-100 group-hover:scale-105 transition-transform px-8 h-12 text-base">
                     Get started free
                     <ArrowRight className="ml-2 size-4" />
                   </Button>
@@ -411,14 +423,14 @@ function PremiumLandingPage() {
                 <Link href="/leaderboard">
                   <Button
                     variant="ghost"
-                    className="text-gray-600 hover:text-gray-900 px-8 h-12 text-base"
+                    className="text-white/90 hover:text-white hover:bg-white/10 px-8 h-12 text-base"
                   >
                     View rankings
                   </Button>
                 </Link>
               </div>
 
-              <div className="mt-12 flex items-center justify-center gap-8 text-sm text-gray-500">
+              <div className="mt-12 flex items-center justify-center gap-8 text-sm text-white/80">
                 <div className="flex items-center gap-2">
                   <Users className="size-4" />
                   <span>Active makers</span>
