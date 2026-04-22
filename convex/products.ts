@@ -313,36 +313,30 @@ export const leaderboard = query({
       }
     });
 
-    const daily = filteredByTime
-      .filter((product) => product.launchDateKey === today)
-      .sort((a, b) => {
+    const mainList = [...filteredByTime].sort((a, b) => {
+      // For short-term filters, use day-specific counters
+      if (args.timeFilter === "today" || args.timeFilter === "yesterday") {
         if (b.dayVotes !== a.dayVotes) return b.dayVotes - a.dayVotes;
         if (b.dayComments !== a.dayComments)
           return b.dayComments - a.dayComments;
-        return getProductLaunchTime(a) - getProductLaunchTime(b);
-      })
-      .slice(0, 10);
+      }
+      // Otherwise use overall votes or scores
+      return b.votesCount - a.votesCount;
+    });
 
-    const weekly = filteredByTime
+    const weeklyTop = products
       .filter((product) => product.weeklyDateKey === week)
       .sort((a, b) => b.weeklyScore - a.weeklyScore)
       .slice(0, 10);
 
-    const dailyProducts =
-      daily.length > 0 ? daily : filteredByTime.slice(0, 10);
-    const weeklyProducts =
-      weekly.length > 0 ? weekly : filteredByTime.slice(0, 10);
-
     return {
       daily: await Promise.all(
-        dailyProducts.map((product) =>
-          enrichProduct(ctx, product, viewer?._id),
-        ),
+        mainList
+          .slice(0, 20)
+          .map((product) => enrichProduct(ctx, product, viewer?._id)),
       ),
       weekly: await Promise.all(
-        weeklyProducts.map((product) =>
-          enrichProduct(ctx, product, viewer?._id),
-        ),
+        weeklyTop.map((product) => enrichProduct(ctx, product, viewer?._id)),
       ),
     };
   },

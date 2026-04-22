@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "DevHunt",
   description: "Discover and launch the best new products in tech.",
   icons: {
-    icon: "/convex.svg",
+    icon: "/favicon.png",
   },
 };
 

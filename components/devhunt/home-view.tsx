@@ -361,12 +361,11 @@ function PremiumLandingPage() {
       );
 
       gsap.to(".floating-badge", {
-        y: -15,
-        duration: 2,
+        y: -4,
+        duration: 3,
         repeat: -1,
         yoyo: true,
         ease: "sine.inOut",
-        stagger: 0.3,
       });
     });
 
@@ -385,27 +384,26 @@ function PremiumLandingPage() {
         </div>
 
         <div className="ph-container relative">
-          <div className="grid gap-12 lg:grid-cols-2 lg:gap-8">
-            <div className="hero-content flex flex-col justify-center">
-              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-1.5 text-sm text-orange-700 floating-badge">
+          <div className="flex flex-col items-center text-center max-w-4xl mx-auto py-12">
+            <div className="hero-content flex flex-col items-center">
+              <div className="relative z-10 inline-flex w-fit items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-1.5 text-sm text-orange-700 shadow-sm mb-2 self-center floating-badge">
                 <Sparkles className="size-4 text-orange-500" />
                 <span>Discover new products daily</span>
               </div>
-
-              <h1 className="mt-6 font-heading text-5xl font-semibold leading-tight tracking-tight text-gray-900 sm:text-6xl lg:text-7xl">
+              <h1 className="mt-10 font-heading text-5xl font-semibold leading-tight tracking-tight text-gray-900 sm:text-6xl lg:text-7xl">
                 The best new
                 <br />
                 <span className="text-orange-600">products in tech</span>
               </h1>
 
-              <p className="mt-6 max-w-xl text-lg leading-relaxed text-gray-600">
+              <p className="mt-6 max-w-2xl text-lg leading-relaxed text-gray-600">
                 DevHunt is where makers launch and users discover the next
                 generation of developer tools.
               </p>
 
-              <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+              <div className="mt-10 flex flex-col gap-4 sm:flex-row justify-center">
                 <SignUpButton mode="modal">
-                  <Button className="bg-gray-900 text-white hover:bg-gray-800 group-hover:scale-105 transition-transform">
+                  <Button className="bg-gray-900 text-white hover:bg-gray-800 group-hover:scale-105 transition-transform px-8 h-12 text-base">
                     Get started free
                     <ArrowRight className="ml-2 size-4" />
                   </Button>
@@ -413,14 +411,14 @@ function PremiumLandingPage() {
                 <Link href="/leaderboard">
                   <Button
                     variant="ghost"
-                    className="text-gray-600 hover:text-gray-900"
+                    className="text-gray-600 hover:text-gray-900 px-8 h-12 text-base"
                   >
                     View rankings
                   </Button>
                 </Link>
               </div>
 
-              <div className="mt-12 flex items-center gap-8 text-sm text-gray-500">
+              <div className="mt-12 flex items-center justify-center gap-8 text-sm text-gray-500">
                 <div className="flex items-center gap-2">
                   <Users className="size-4" />
                   <span>Active makers</span>
@@ -432,40 +430,6 @@ function PremiumLandingPage() {
                 <div className="flex items-center gap-2">
                   <Target className="size-4" />
                   <span>Categories</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="hero-visual relative hidden lg:block">
-              <div className="absolute -inset-6 rounded-3xl bg-gradient-to-br from-orange-200 via-amber-100 to-orange-200 blur-2xl" />
-              <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
-                <div className="p-6 space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-4 rounded-xl border border-gray-100 bg-gray-50 p-4"
-                    >
-                      <div className="size-12 shrink-0 rounded-lg bg-gradient-to-br from-orange-400 to-orange-500" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-3 w-24 rounded bg-gray-300" />
-                        <div className="h-2 w-32 rounded bg-gray-200" />
-                      </div>
-                      <div className="flex items-center gap-1 text-gray-500">
-                        <TrendingUp className="size-3.5 text-orange-500" />
-                        <span className="text-sm font-semibold">
-                          {10 + i * 5}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="border-t border-gray-100 p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">
-                      Trending today
-                    </span>
-                    <ArrowRight className="size-4 text-gray-400" />
-                  </div>
                 </div>
               </div>
             </div>

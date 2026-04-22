@@ -3,7 +3,7 @@
 import { memo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Plus } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -97,13 +97,13 @@ function ProductCardInner({
             } ${isAnimating ? "scale-125" : ""}`}
             onClick={handleVote}
           >
-            <span
-              className={`text-xl font-bold leading-none transition-transform duration-150 ${
-                isVoted ? "text-white" : "text-gray-500"
-              } ${isAnimating ? "scale-125" : ""}`}
-            >
-              +
-            </span>
+            <div className="flex items-center justify-center w-full h-full">
+              <Plus
+                className={`size-4 transition-transform duration-150 ${
+                  isVoted ? "text-white" : "text-gray-500"
+                } ${isAnimating ? "scale-125" : ""}`}
+              />
+            </div>
           </Button>
         </div>
       )}
